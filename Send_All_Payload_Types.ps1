@@ -17,8 +17,10 @@ function Send-Messages {
         [string]$folder
     )
 
-    # Convert $user_id and $password to credential, required by PowerShell.
-    $my_credential = ( Set-Credential $user_id $password )
+    if ( $user_id ) {
+        # Convert $user_id and $password to credential, required by PowerShell.
+        $my_credential = ( Set-Credential $user_id $password )
+    }
 
     get-childitem $folder | foreach {
     
@@ -28,7 +30,10 @@ function Send-Messages {
             To = $to
             SmtpServer = $smtp_server
             Port = $port
-            Credential = $my_credential
+        }
+
+        if ( $user_id ) {        
+            $MailParams.Credential = $my_credential
         }
 
         if ($useSsl) {
@@ -72,6 +77,7 @@ function Send-Messages {
         start-sleep $sleep_interval
     }
 
+    return $email_counter
 }
 
 
@@ -95,8 +101,8 @@ function Invoke-EmailTest {
 
     $email_counter = 0
 
-    Send-Messages -type "attachment" -folder $attachments_folder
-    Send-Messages -type "message" -folder $messages_folder
+    $email_counter = ( Send-Messages -type "attachment" -folder $attachments_folder )
+    $email_counter = ( Send-Messages -type "message" -folder $messages_folder )
 
     echo "ALL DONE!"
 }
