@@ -1,7 +1,7 @@
 ﻿function Set-Credential {
     param (
-        [string]$user_id,
-        [string]$password
+        [Parameter(Mandatory = $true)] [string]$user_id,
+        [Parameter(Mandatory = $true)] [string]$password
     )
 
     ( New-Object System.Management.Automation.PSCredential(
@@ -17,7 +17,7 @@ function Send-Messages {
         [string]$folder
     )
 
-    if ( $user_id ) {
+    if ( $user_id -and $user_id -ne "" -and $password -and $password -ne "" ) {
         # Convert $user_id and $password to credential, required by PowerShell.
         $my_credential = ( Set-Credential $user_id $password )
     }
@@ -32,7 +32,7 @@ function Send-Messages {
             Port = $port
         }
 
-        if ( $user_id ) {        
+        if ( $user_id -and $user_id -ne "" -and $password -and $password -ne "" ) {
             $MailParams.Credential = $my_credential
         }
 
@@ -42,17 +42,17 @@ function Send-Messages {
         
 
         # Counter, to track which email we're on.
-        $email_counter += 1
+        $global:email_counter += 1
 
         # Subject is always: "$subject $email_counter: {test file name}"
         # Examples:          "BHIS TEST 1: REG_File.reg"
         #                    "BHIS TEST 2: QR_Code-Harmless_Table.html"
-        $MailParams.Subject = ( $subject + " " + $email_counter + ": " + $_.Name )
+        $MailParams.Subject = ( $subject + " " + $global:email_counter + ": " + $_.Name )
 
 
         if ( $type -eq "attachment" ) {
             $MailParams.Attachments = ( $($attachments_folder) + $_.Name )
-            echo $MailParams.Attachments
+            #echo $MailParams.Attachments
         } elseif ( $type -eq "message" ) {
             $body = $_.FullName
         } else {
@@ -66,18 +66,17 @@ function Send-Messages {
             $MailParams.BodyAsHtml = $true
             $MailParams.Body = ( get-content $body -raw )
         } else {
-            $MailParams.Body = ( $body + "`nTest email #" + $email_counter + "`nAttachment: " + $_.Name + "`nSent at: $(date)" )
+            $MailParams.Body = ( $body + "`nTest email #" + $global:email_counter + "`nAttachment: " + $_.Name + "`nSent at: $(date)" )
         }
 
 
         echo ( "Sending: '" + $MailParams.Subject + "'..." )
     
-        #Send-MailMessage @MailParams
+        Send-MailMessage @MailParams
 
         start-sleep $sleep_interval
     }
 
-    return $email_counter
 }
 
 
@@ -99,10 +98,10 @@ function Invoke-EmailTest {
         [string]$sleep_interval = 5
     )
 
-    $email_counter = 0
+    $global:email_counter = 0
 
-    $email_counter = ( Send-Messages -type "attachment" -folder $attachments_folder )
-    $email_counter = ( Send-Messages -type "message" -folder $messages_folder )
+    Send-Messages -type "message" -folder $messages_folder
+    Send-Messages -type "attachment" -folder $attachments_folder
 
     echo "ALL DONE!"
 }
