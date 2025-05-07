@@ -90,68 +90,82 @@ function Send-Messages {
     }
 
     get-childitem $folder | foreach {
-    
-        # Email paramaters that never change go here.
-        $MailParams = @{
-            From = $from
-            To = $to
-            SmtpServer = $smtp_server
-            Port = $port
-        }
-
-        if ( $user_id -and $user_id -ne "" -and $password -and $password -ne "" ) {
-            $MailParams.Credential = $my_credential
-        }
-
-        if ($useSsl) {
-            $MailParams.UseSsl = $true
-        }
-        
 
         # Counter, to track which email we're on.
         $global:email_counter += 1
 
-        # Subject is always: "$subject $email_counter: {test file name}"
-        # Examples:          "BHIS TEST 1: REG_File.reg"
-        #                    "BHIS TEST 2: QR_Code-Harmless_Table.html"
-        $MailParams.Subject = ( $subject + " " + $global:email_counter + ": " + $_.Name )
-
-
-        if ( $type -eq "attachment" ) {
-            $MailParams.Attachments = ( $($attachments_folder) + $_.Name )
-            echo $MailParams.Attachments
-        } elseif ( $type -eq "message" ) {
-            $body = $_.FullName
+        if ( [int]$global:resume -gt [int]$global:email_counter ) {
+            echo ( "Resuming on message: $resume. Skipping " + $global:email_counter + "..." )
         } else {
-            echo 'ERROR: $type not understood. Quitting.'
-            exit
-        }
 
-        # If $body contains a valid file path, send that file as the message body in HTML format.
-        # Otherwise send an attachment, and print details in the message body.
-        if (Test-Path $body -PathType Leaf){
-            $MailParams.BodyAsHtml = $true
-            $MailParams.Body = ( get-content $body -raw )
-        } else {
-            $MailParams.Body = ( $body + "`n`nTest email #" + $global:email_counter + "`nAttachment: " + $_.Name + "`nSent at: $(date)" )
-        }
+            # Email paramaters that never change go here.
+            $MailParams = @{
+                From = $from
+                To = $to
+                SmtpServer = $smtp_server
+                Port = $port
+            }
+
+            if ( $user_id -and $user_id -ne "" -and $password -and $password -ne "" ) {
+                $MailParams.Credential = $my_credential
+            }
+
+            if ($useSsl) {
+                $MailParams.UseSsl = $true
+            }
+        
 
 
-        $output = ( ( get-date -Format "yyyy-MM-dd HH:mm K> " ) + "SENDING: '" + $MailParams.Subject + "'..." ) 
-        echo $output
-        if ( $log_file ) { echo $output | add-content $log_file }
+
+            # Subject is always: "$subject $email_counter: {type}: {test file name}"
+            # Examples:          "BHIS 1 [No Attachment]: QR_Code-Harmless_Table.html"
+            #                    "BHIS 2 [Attachment]: REG_File.reg"
+
+           if ( $type -eq "Attachment" -or $type -eq "attachment") {
+                $MailParams.Subject = ( $subject + " " + $global:email_counter + " [Attachment]: " + $_.Name )
+
+                # If $type="Attachment", configure the Attachments parameter.
+                $MailParams.Attachments = ( $($attachments_folder) + $_.Name )
+                echo $MailParams.Attachments
+
+            } elseif ( $type -eq "Message" -or $type -eq "message" ) {
+                $MailParams.Subject = ( $subject + " " + $global:email_counter + " [No Attachment]: " + $_.Name )
+            
+                # If $type="Message", set the message file as the $body parameter.
+                $body = $_.FullName
+
+            } else {
+                echo 'ERROR: $type not understood. Quitting.'
+                exit
+            }
+
+
+            # If $body contains a valid file path, send that file as the message body in HTML format.
+            # Otherwise send an attachment, and print details in the message body.
+            if (Test-Path $body -PathType Leaf){
+                $MailParams.BodyAsHtml = $true
+                $MailParams.Body = ( get-content $body -raw )
+            } else {
+                $MailParams.Body = ( $body + "`n`nTest email #" + $global:email_counter + "`nAttachment: " + $_.Name + "`nSent at: $(date)" )
+            }
+
+
+            $output = ( ( get-date -Format "yyyy-MM-dd HH:mm K> " ) + "SENDING: '" + $MailParams.Subject + "'..." ) 
+            echo $output
+            if ( $log_file ) { echo $output | add-content $log_file }
     
-        if ( $method -eq 1 ) { 
-            Send-MailMessage @MailParams
-        } elseif ($method -eq 2) { 
-            Send-MyMailMessage @MailParams 
-        } else {
-            echo "ERROR: Method must be set to 1 or 2. Quitting."
-            exit
-        }
+            if ( $method -eq 1 ) { 
+                Send-MailMessage @MailParams
+            } elseif ($method -eq 2) { 
+                Send-MyMailMessage @MailParams 
+            } else {
+                echo "ERROR: Method must be set to 1 or 2. Quitting."
+                exit
+            }
 
-        echo "...Sleeping $sleep_interval seconds..."
-        start-sleep $sleep_interval
+            echo "...Sleeping $sleep_interval seconds..."
+            start-sleep $sleep_interval
+        }
     }
 
 }
@@ -176,14 +190,16 @@ function Invoke-EmailTest {
 
         [string]$log_file = "./EmailTest.log",
 
-        [string]$method = 2
+        [string]$method = 2,
+        [int]$resume = 1
     )
 
+    $global:resume = $resume
     $global:email_counter = 0
     
     echo ""
-    Send-Messages -type "message" -folder $messages_folder
-    Send-Messages -type "attachment" -folder $attachments_folder
+    Send-Messages -type "Message" -folder $messages_folder
+    Send-Messages -type "Attachment" -folder $attachments_folder
     
 
     echo "ALL DONE!"
