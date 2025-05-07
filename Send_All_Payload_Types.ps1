@@ -133,7 +133,7 @@ function Send-Messages {
             $MailParams.BodyAsHtml = $true
             $MailParams.Body = ( get-content $body -raw )
         } else {
-            $MailParams.Body = ( $body + "`nTest email #" + $global:email_counter + "`nAttachment: " + $_.Name + "`nSent at: $(date)" )
+            $MailParams.Body = ( $body + "`n`nTest email #" + $global:email_counter + "`nAttachment: " + $_.Name + "`nSent at: $(date)" )
         }
 
 
