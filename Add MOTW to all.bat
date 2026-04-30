@@ -1,2 +1,2 @@
 cd /d "%~dp0"
-powershell -c "dir | foreach { echo '[ZoneTransfer]' 'ZoneId=3' | set-content ( '.\' + $_.name + ':Zone.Identifier' ) }"
+powershell -c "dir | foreach { echo '[ZoneTransfer]' 'ZoneId=3' 'HostUrl=http://malware.wicar.org/data/eicar.com' | set-content ('.\'+$_.name+':Zone.Identifier') ; remove-item -force ('.\'+$_.name+':SmartScreen') -ErrorAction SilentlyContinue}"
