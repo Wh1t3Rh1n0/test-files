@@ -1,0 +1,9 @@
+Any of these commands will execute the DLL:
+
+rundll32.exe DLL_File_Unsigned.dll,DllRegisterServer
+
+rundll32.exe DLL_File_Unsigned.dll,DllUnregisterServer
+
+regsvr32.exe /s /i DLL_File_Unsigned.dll
+
+regsvr32.exe /s /u DLL_File_Unsigned.dll
